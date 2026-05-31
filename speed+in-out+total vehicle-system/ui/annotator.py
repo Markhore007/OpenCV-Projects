@@ -35,9 +35,16 @@ class Annotator:
         cv2.putText(frame, "COUNTING LINE", (start_pt[0] + 10, start_pt[1] - 10), self.font, self.font_scale, self.color_line, self.thickness)
         return frame
 
-    def draw_vehicle(self, frame, bbox, vehicle_number, vehicle_type, direction, tracker_id):
+    def draw_vehicle(self, frame, bbox, vehicle_number, vehicle_type, direction, tracker_id, history=None):
         x1, y1, x2, y2 = map(int, bbox)
-        
+
+        # Draw movement trail first so it appears behind the box
+        if history is not None and len(history) > 1:
+            pts = [(int(x), int(y)) for x, y in history]
+            cv2.polylines(frame, [np.array(pts, dtype=np.int32)], isClosed=False, color=(0, 200, 255), thickness=2, lineType=cv2.LINE_AA)
+            # Optional: draw end point marker
+            cv2.circle(frame, pts[-1], 4, (0, 200, 255), -1)
+
         # Bounding box
         cv2.rectangle(frame, (x1, y1), (x2, y2), self.color_bbox, 2)
         

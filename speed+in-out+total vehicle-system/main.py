@@ -99,6 +99,7 @@ def main():
         results = model.track(frame, persist=True, tracker=settings.TRACKER_TYPE, classes=settings.TARGET_CLASSES, conf=settings.CONFIDENCE_THRESHOLD)
         
         # We need to process the detections
+        track_ids = []
         if results[0].boxes is not None and results[0].boxes.id is not None:
             boxes = results[0].boxes.xyxy.cpu().numpy()
             track_ids = results[0].boxes.id.cpu().numpy()
@@ -111,7 +112,7 @@ def main():
                 centroid = ((x1 + x2) / 2, (y1 + y2) / 2)
                 
                 # Get permanent vehicle number
-                vehicle_number = tracker.update(int(track_id), centroid)
+                vehicle_number = tracker.update(int(track_id), centroid, frame_num)
                 history = tracker.get_history(vehicle_number)
                 
                 # Check for line crossing
@@ -131,9 +132,12 @@ def main():
                 # Current known direction (might be None if hasn't crossed)
                 current_dir = counter.vehicle_directions.get(vehicle_number)
 
-                # Draw vehicle
+                # Draw vehicle and its movement trail
                 vehicle_type_name = model.names[int(cls_idx)]
-                frame = annotator.draw_vehicle(frame, bbox, vehicle_number, vehicle_type_name, current_dir, int(track_id))
+                frame = annotator.draw_vehicle(frame, bbox, vehicle_number, vehicle_type_name, current_dir, int(track_id), history)
+
+        # Prune inactive tracks after each frame so trails disappear after a timeout
+        tracker.prune_inactive(set(track_ids), frame_num)
 
         # Draw counting line
         frame = annotator.draw_line(frame, settings.COUNTING_LINE_START, settings.COUNTING_LINE_END)
